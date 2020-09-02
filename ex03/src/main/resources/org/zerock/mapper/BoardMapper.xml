@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.zerock.mapper.BoardMapper">
+<!-- 더미데이터 입력 루프
+BEGIN
+FOR I IN 1 .. 100 LOOP
+INSERT INTO tbl_board (bno, title, content, writer)
+VALUES (seq_board.NEXTVAL, '새로 작성하는 제목', '새로 작성하는 내용', 'user00');
+END LOOP;
+END;
+
+ -->
+	<select id="getList" resultType="org.zerock.domain.BoardVO">
+	<![CDATA[SELECT * FROM tbl_board WHERE bno > 0 ORDER BY bno DESC]]>
+	</select>
+	
+	<sql id="criteria">
+		<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+			<foreach item='type' collection="typeArr">
+				<trim prefix="OR">
+					<choose>
+						<when test="type == 'T'.toString()">
+							title like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'C'.toString()">
+							content like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'W'.toString()">
+							writer like '%'||#{keyword}||'%'
+						</when>
+					</choose>
+				</trim>
+			</foreach>
+		</trim>
+	</sql>
+	
+	<select id="getListWithPaging" resultType="org.zerock.domain.BoardVO">
+	<![CDATA[
+	SELECT bno, title, content, writer, regdate, updatedate
+	FROM
+		(
+		SELECT /*+ INDEX_DESC(tbl_board pk_board)*/ ROWNUM rn, bno, title, content, writer, regdate, updatedate
+		FROM tbl_board
+		WHERE
+	]]>
+	<include refid="criteria"></include>
+	<![CDATA[
+	 ROWNUM <= #{pageNum} * #{amount}
+		)
+	WHERE rn > (#{pageNum} -1) * #{amount}
+	]]>
+	</select>
+
+	<insert id="insert">
+		INSERT INTO tbl_board (bno, title, content, writer)
+		VALUES (seq_board.NEXTVAL, #{title}, #{content}, #{writer})
+	</insert>
+
+	<insert id="insertSelectKey">
+		<selectKey keyProperty="bno" order="BEFORE" resultType="long">
+		SELECT seq_board.NEXTVAL FROM DUAL
+		</selectKey>
+		INSERT INTO tbl_board (bno, title, content, writer)
+		VALUES (#{bno}, #{title}, #{content}, #{writer})
+	</insert>
+	
+	<select id="read" resultType="org.zerock.domain.BoardVO">
+		SELECT * FROM tbl_board WHERE bno = #{bno} 
+	</select>
+	
+	<delete id="delete">
+		DELETE FROM tbl_board WHERE bno= #{bno}
+	</delete>
+	
+	<update id="update">
+		UPDATE tbl_board 
+		SET title = #{title}, content = #{content}, writer = #{writer}, updateDate = sysdate
+		WHERE bno = #{bno}
+	</update>
+	
+	<select id="getTotalCount" resultType="int">
+		SELECT COUNT(*) FROM tbl_board WHERE bno > 0
+	</select>
+</mapper>
